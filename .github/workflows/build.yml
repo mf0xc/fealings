@@ -1,0 +1,177 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. سحب الكود
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. إعداد Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 3. إعداد Java 17 (مطلوب لـ Android)
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # 4. إعداد Android SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # 5. تثبيت Capacitor
+      - name: Install Capacitor
+        run: |
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+
+      # 6. تهيئة مشروع Capacitor
+      - name: Init Capacitor
+        run: npx cap init "حمودي وفوفو" com.feelings.app --web-dir www
+
+      # 7. نسخ ملفات الويب إلى مجلد www
+      - name: Prepare Web Files
+        run: |
+          mkdir -p www
+          cp index.html www/
+          cp main.js www/
+          cp style.css www/
+          cp icon.png www/
+
+      # 8. إضافة منصة Android
+      - name: Add Android Platform
+        run: npx cap add android
+
+      # 9. توليد أيقونات Android بأحجامها من icon.png
+      - name: Generate Android Icons
+        run: |
+          pip install Pillow
+          python3 << 'PYEOF'
+          from PIL import Image
+          import os
+
+          icon = Image.open('icon.png').convert('RGBA')
+          base_dir = 'android/app/src/main/res'
+
+          sizes = {
+              'mipmap-mdpi': 48,
+              'mipmap-hdpi': 72,
+              'mipmap-xhdpi': 96,
+              'mipmap-xxhdpi': 144,
+              'mipmap-xxxhdpi': 192
+          }
+
+          for folder, size in sizes.items():
+              path = os.path.join(base_dir, folder)
+              os.makedirs(path, exist_ok=True)
+              resized = icon.resize((size, size), Image.LANCZOS)
+
+              # ic_launcher.png
+              resized.save(os.path.join(path, 'ic_launcher.png'), 'PNG')
+              # ic_launcher_foreground.png
+              resized.save(os.path.join(path, 'ic_launcher_foreground.png'), 'PNG')
+              # ic_launcher_round.png
+              resized.save(os.path.join(path, 'ic_launcher_round.png'), 'PNG')
+
+          print("Icons generated successfully!")
+          PYEOF
+
+      # 10. إنشاء شاشة السبلاش (Splash Screen) بيضاء مع الأيقونة في المنتصف
+      - name: Create Splash Screen
+        run: |
+          pip install Pillow
+          python3 << 'PYEOF'
+          from PIL import Image
+          import os
+
+          # أحجام شاشات Android المختلفة
+          splash_sizes = {
+              'drawable-mdpi': (320, 480),
+              'drawable-hdpi': (480, 800),
+              'drawable-xhdpi': (720, 1280),
+              'drawable-xxhdpi': (960, 1600),
+              'drawable-xxxhdpi': (1280, 1920)
+          }
+
+          icon_img = Image.open('icon.png').convert('RGBA')
+          base_dir = 'android/app/src/main/res'
+
+          for folder, (w, h) in splash_sizes.items():
+              path = os.path.join(base_dir, folder)
+              os.makedirs(path, exist_ok=True)
+
+              # خلفية بيضاء
+              splash = Image.new('RGB', (w, h), color='#1C2449')
+
+              # حجم الأيقونة = 25% من عرض الشاشة
+              icon_size = int(w * 0.25)
+              icon_resized = icon_img.resize((icon_size, icon_size), Image.LANCZOS)
+
+              # وضع الأيقونة في المنتصف
+              x = (w - icon_size) // 2
+              y = (h - icon_size) // 2
+              splash.paste(icon_resized, (x, y), icon_resized)
+
+              splash.save(os.path.join(path, 'splash.png'), 'PNG')
+
+          print("Splash screens generated successfully!")
+          PYEOF
+
+      # 11. تعديل ملف splash.xml لعرض splash.png
+      - name: Configure Splash XML
+        run: |
+          cat > android/app/src/main/res/drawable/splash.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+              <item android:drawable="#1C2449" />
+              <item>
+                  <bitmap
+                      android:gravity="center"
+                      android:src="@drawable/splash" />
+              </item>
+          </layer-list>
+          EOF
+
+      # 12. تعديل AndroidManifest.xml لاستخدام الأيقونة
+      - name: Update AndroidManifest
+        run: |
+          sed -i 's/android:icon="@mipmap\/ic_launcher"/android:icon="@mipmap\/ic_launcher" android:roundIcon="@mipmap\/ic_launcher_round"/' android/app/src/main/AndroidManifest.xml
+
+      # 13. بناء APK
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      # 14. رفع APK كـ Artifact
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hamoodi-fofo-app
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      # 15. (اختياري) نشر Release على GitHub
+      - name: Create Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: "حمودي وفوفو - الإصدار ${{ github.run_number }}"
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
