@@ -1,5 +1,5 @@
 // ============================================
-// مشروع مشاركة المشاعر - فرات وفوفو
+// مشروع مشاركة المشاعر - حمودي وفوفو
 // ============================================
 
 // -- إعدادات Supabase --
@@ -86,7 +86,7 @@ function initLoginScreen() {
 function login(userName) {
   console.log('[APP] Logging in as:', userName);
   currentUser = userName;
-  otherUser = (userName === 'فرات') ? 'فوفو' : 'فرات';
+  otherUser = (userName === 'حمودي') ? 'فوفو' : 'حمودي';
 
   localStorage.setItem('currentUser', currentUser);
 
@@ -398,7 +398,7 @@ function initEventListeners() {
 
 function checkExistingSession() {
   var savedUser = localStorage.getItem('currentUser');
-  if (savedUser && (savedUser === 'فرات' || savedUser === 'فوفو')) {
+  if (savedUser && (savedUser === 'حمودي' || savedUser === 'فوفو')) {
     console.log('[APP] Restoring session for:', savedUser);
     login(savedUser);
   }
