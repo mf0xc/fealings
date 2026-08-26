@@ -42,17 +42,26 @@ body {
   overflow-x: hidden;
 }
 
-/* Screen Management */
+/* Screen Management - Fixed transitions */
 .screen {
-  display: none;
-  opacity: 0;
-  transition: opacity 0.5s ease;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
   min-height: 100vh;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+  z-index: 1;
+  display: flex;
+  pointer-events: none;
 }
 
 .screen.active {
-  display: flex;
   opacity: 1;
+  visibility: visible;
+  z-index: 10;
+  pointer-events: all;
 }
 
 /* ============================================
@@ -130,6 +139,7 @@ body {
   align-items: center;
   gap: 12px;
   outline: none;
+  font-family: var(--font);
 }
 
 .user-card:hover,
@@ -526,17 +536,4 @@ body {
   .btn-add {
     justify-content: center;
   }
-}
-
-/* Loading State */
-.loading-shimmer {
-  background: linear-gradient(90deg, var(--bg) 25%, #fff 50%, var(--bg) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 8px;
-}
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
 }
