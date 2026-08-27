@@ -21,12 +21,12 @@ jobs:
         with:
           node-version: 20
 
-      # 3. إعداد بيئة جافا (Java 17 المطلوبة لبناء الأندرويد)
-      - name: Set up JDK 17
+      # 3. إعداد بيئة جافا (تم التحديث إلى Java 21 المتوافقة مع متطلبات البناء الحديثة)
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
 
       # 4. نقل ملفات الويب وتجهيز بنية المجلدات لتوافق Capacitor
       - name: Prepare Web Directory and Config
@@ -58,7 +58,7 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      # 7. حل مشكلة تكرار كلاسات Kotlin (تعديل الـ build.gradle المنشأ)
+      # 7. حل مشكلة تكرار كلاسات Kotlin (تعديل الـ build.gradle المنشأ لتوحيد الإصدارات)
       - name: Fix Kotlin Duplicate Classes Conflict
         run: |
           echo "configurations.all { resolutionStrategy { eachDependency { details -> if (details.requested.group == 'org.jetbrains.kotlin') { details.useVersion '1.8.22' } } } }" >> android/app/build.gradle
