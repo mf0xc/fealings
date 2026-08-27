@@ -15,21 +15,20 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # 2. إعداد بيئة Node.js
+      # 2. إعداد بيئة Node.js (تمت الترقية إلى Node 24 المستقرة لحل تنبيه الأمان)
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 24
 
-      # 3. إعداد بيئة جافا (Java 17 متوافقة مع Gradle الحديث)
+      # 3. إعداد بيئة جافا (Java 17 متوافقة مع إصدارات Gradle الحديثة)
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      # 4. تثبيت حزم الاعتماديات
+      # 4. تثبيت حزم الاعتماديات مباشرة
       - name: Install Dependencies
         run: npm install
 
@@ -45,23 +44,23 @@ jobs:
             "
           fi
 
-      # 6. مزامنة ملفات الويب مع مجلد الأندرويد
+      # 6. مزامنة ملفات الويب من سطح المشروع مع مجلد الأندرويد
       - name: Sync Capacitor Android
         run: npx cap sync android
 
-      # 7. حل مشكلة تكرار كلاسات Kotlin (تعديل الـ build.gradle برمجياً)
+      # 7. حل مشكلة تكرار كلاسات Kotlin (تعديل الـ build.gradle برمجياً لمنع تعارض الحزم)
       - name: Fix Kotlin Duplicate Classes Conflict
         run: |
           echo "configurations.all { resolutionStrategy { eachDependency { details -> if (details.requested.group == 'org.jetbrains.kotlin') { details.useVersion '1.8.22' } } } }" >> android/app/build.gradle
 
-      # 8. بناء ملف الـ APK (Debug) باستخدام Gradle
+      # 8. بناء ملف الـ APK (Debug) باستخدام أداة عمالة Gradle
       - name: Build Android APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      # 9. رفع ملف الـ APK المستخرج لتحميله مباشرة
+      # 9. رفع ملف الـ APK المستخرج لتحميله من الـ Artifacts بعد انتهاء المهمة
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
