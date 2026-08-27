@@ -15,27 +15,36 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # 2. إعداد بيئة Node.js (إصدار حديث ومتوافق)
+      # 2. إعداد بيئة Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # 3. إعداد بيئة جافا (Java 17 المطلوبة لبناء الأندرويد الحديث)
+      # 3. إعداد بيئة جافا (Java 17 المطلوبة لبناء الأندرويد)
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      # 4. إنشاء ملفات إعدادات المشروع تلقائياً (لتعويض الملفات الناقصة)
-      - name: Generate Package.json and Capacitor Config
+      # 4. نقل ملفات الويب وتجهيز بنية المجلدات لتوافق Capacitor
+      - name: Prepare Web Directory and Config
         run: |
-          # إنشاء package.json افتراضي
+          # إنشاء مجلد مخصص للويب لتجنب خطأ الجذر "."
+          mkdir -p www
+          
+          # نسخ ملفات الويب الأساسية الخاصة بك إلى المجلد الجديد
+          cp index.html www/
+          cp main.js www/
+          cp style.css www/
+          cp icon.png www/
+          
+          # إنشاء ملف package.json افتراضي في السطح
           echo '{"name": "my-app", "version": "1.0.0", "dependencies": {}, "devDependencies": {}}' > package.json
           
-          # إنشاء إعدادات كاباسيتور لتقرأ من سطح المشروع مباشرة "."
-          echo '{"appId": "com.mycompany.myapp", "appName": "MyCapacitorApp", "webDir": ".", "bundledWebRuntime": false}' > capacitor.config.json
+          # إنشاء إعدادات Capacitor لتشير إلى المجلد المخصص "www"
+          echo '{"appId": "com.mycompany.myapp", "appName": "MyCapacitorApp", "webDir": "www", "bundledWebRuntime": false}' > capacitor.config.json
 
       # 5. تثبيت حزم Capacitor الأساسية والمنصة الخاصة بالأندرويد
       - name: Install Capacitor Core & Android CLI
@@ -43,13 +52,13 @@ jobs:
           npm install @capacitor/core @capacitor/cli
           npm install @capacitor/android
 
-      # 6. إنشاء مجلد الأندرويد ومزامنة ملفات الويب الخاصة بك معه
+      # 6. إنشاء مجلد الأندرويد ومزامنة ملفات الويب بشكل صحيح
       - name: Create and Sync Android Project
         run: |
           npx cap add android
           npx cap sync android
 
-      # 7. حل مشكلة تكرار كلاسات Kotlin (الحل البرمجي مباشرة في ملف build.gradle المنشأ)
+      # 7. حل مشكلة تكرار كلاسات Kotlin (تعديل الـ build.gradle المنشأ)
       - name: Fix Kotlin Duplicate Classes Conflict
         run: |
           echo "configurations.all { resolutionStrategy { eachDependency { details -> if (details.requested.group == 'org.jetbrains.kotlin') { details.useVersion '1.8.22' } } } }" >> android/app/build.gradle
