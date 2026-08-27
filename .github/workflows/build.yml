@@ -11,56 +11,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. جلب الكود من المستودع
+      # 1. جلب الكود ومجلد الأندرويد من المستودع
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # 2. إعداد بيئة Node.js (تمت الترقية إلى Node 24 المستقرة لحل تنبيه الأمان)
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      # 3. إعداد بيئة جافا (Java 17 متوافقة مع إصدارات Gradle الحديثة)
+      # 2. إعداد بيئة جافا (Java 17 متوافقة مع إصدارات Gradle الحديثة)
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      # 4. تثبيت حزم الاعتماديات مباشرة
-      - name: Install Dependencies
-        run: npm install
-
-      # 5. تعديل ملف إعدادات Capacitor برمجياً ليقرأ من سطح المشروع مباشرة "."
-      - name: Configure Capacitor WebDir to Root
-        run: |
-          if [ -f "capacitor.config.json" ]; then
-            node -e "
-              const fs = require('fs');
-              const config = JSON.parse(fs.readFileSync('capacitor.config.json', 'utf8'));
-              config.webDir = '.';
-              fs.writeFileSync('capacitor.config.json', JSON.stringify(config, null, 2));
-            "
-          fi
-
-      # 6. مزامنة ملفات الويب من سطح المشروع مع مجلد الأندرويد
-      - name: Sync Capacitor Android
-        run: npx cap sync android
-
-      # 7. حل مشكلة تكرار كلاسات Kotlin (تعديل الـ build.gradle برمجياً لمنع تعارض الحزم)
+      # 3. حل مشكلة تكرار كلاسات Kotlin (تعديل الـ build.gradle برمجياً لمنع التعارض)
       - name: Fix Kotlin Duplicate Classes Conflict
         run: |
-          echo "configurations.all { resolutionStrategy { eachDependency { details -> if (details.requested.group == 'org.jetbrains.kotlin') { details.useVersion '1.8.22' } } } }" >> android/app/build.gradle
+          if [ -d "android" ]; then
+            echo "configurations.all { resolutionStrategy { eachDependency { details -> if (details.requested.group == 'org.jetbrains.kotlin') { details.useVersion '1.8.22' } } } }" >> android/app/build.gradle
+          fi
 
-      # 8. بناء ملف الـ APK (Debug) باستخدام أداة عمالة Gradle
+      # 4. بناء ملف الـ APK (Debug) باستخدام Gradle مباشرة
       - name: Build Android APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      # 9. رفع ملف الـ APK المستخرج لتحميله من الـ Artifacts بعد انتهاء المهمة
+      # 5. رفع ملف الـ APK المستخرج لتحميله من الـ Artifacts بعد انتهاء البناء
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
